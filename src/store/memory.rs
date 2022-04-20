@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
 use super::Store;
+use crate::Result;
 
 pub struct MemoryKvStore {
-    kvs: HashMap<String, String>,
+    kvs: HashMap<Vec<u8>, Vec<u8>>,
 }
 
 impl MemoryKvStore {
@@ -15,16 +16,20 @@ impl MemoryKvStore {
 }
 
 impl Store for MemoryKvStore {
-    fn set(&mut self, key: &str, value: &str) -> Option<String> {
-        self.kvs.insert(key.into(), value.into())
+    fn set(&mut self, key: &[u8], value: &[u8]) -> Result<()> {
+        self.kvs.insert(key.into(), value.into());
+        Ok(())
     }
 
-    fn get(&self, key: &str) -> Option<String> {
-        self.kvs.get(key).cloned()
+    fn get(&self, key: &[u8]) -> Result<Option<&[u8]>> {
+        let value = self.kvs.get(key).map(Vec::as_ref);
+
+        Ok(value)
     }
 
-    fn remove(&mut self, key: &str) -> Option<String> {
-        self.kvs.remove(key)
+    fn remove(&mut self, key: &[u8]) -> Result<()> {
+        self.kvs.remove(key);
+        Ok(())
     }
 }
 

@@ -1,49 +1,68 @@
+pub mod lsm;
 pub mod memory;
 
+use crate::Result;
+
 pub trait Store {
-    /// Sets the values of a string key to a string.
+    /// Sets the value of a string key to a string.
     ///
     /// If the key already exists, the previous value will be overwritten.
-    fn set(&mut self, key: &str, value: &str) -> Option<String>;
+    ///
+    /// # Errors
+    ///
+    /// It propagates I/O or serialization errors during writing the log.
+    fn set(&mut self, key: &[u8], value: &[u8]) -> Result<()>;
 
     /// Gets the string value of a given string key.
     ///
     /// Returns `None` if the given key does not exist.
-    fn get(&self, key: &str) -> Option<String>;
+    ///
+    /// # Errors
+    ///
+    /// It returns `KvsError::UnexpectedCommandType` if the given command type unexpected.
+    fn get(&self, key: &[u8]) -> Result<Option<&[u8]>>;
 
-    /// Remove a given key
-    fn remove(&mut self, key: &str) -> Option<String>;
+    /// Removes a given key.
+    ///
+    /// # Errors
+    ///
+    /// It returns `KvsError::KeyNotFound` if the given key is not found.
+    ///
+    /// It propagates I/O or serialization errors during writing the log.
+    fn remove(&mut self, key: &[u8]) -> Result<()>;
 }
 
 #[cfg(test)]
 fn test_set(store: &mut impl Store) {
-    let v = store.set("k1", "v");
-    assert_eq!(v, None);
+    let v = store.set(b"k1", b"v").unwrap();
+    assert_eq!(v, ());
 
-    let v = store.set("k1", "v1");
-    assert_eq!(v, Some("v".to_string()))
+    let v = store.set(b"k1", b"v1").unwrap();
+    assert_eq!(v, ());
 }
 
 #[cfg(test)]
 fn test_get(store: &mut impl Store) {
-    let v = store.get("k1");
-    assert_eq!(v, None);
+    let v = store.get(b"k1").unwrap();
+    assert!(v.is_none());
 
-    store.set("k1", "v1");
+    assert_eq!(store.set(b"k1", b"v1").unwrap(), ());
 
-    let v = store.get("k1");
-    assert_eq!(v, Some("v1".to_string()));
+    let v = store.get(b"k1").unwrap().unwrap();
+    assert_eq!(v, b"v1");
 }
 
 #[cfg(test)]
 fn test_remove(store: &mut impl Store) {
-    store.set("k1", "v1");
-    let v = store.get("k1");
-    assert_eq!(v, Some("v1".to_string()));
+    assert_eq!(store.remove(b"k1").unwrap(), ());
+    assert_eq!(store.set(b"k1", b"v1").unwrap(), ());
 
-    let v = store.remove("k1");
-    assert_eq!(v, Some("v1".to_string()));
+    let v = store.get(b"k1").unwrap().unwrap();
+    assert_eq!(v, b"v1");
 
-    let v = store.get("k1");
+    let v = store.remove(b"k1").unwrap();
+    assert_eq!(v, ());
+
+    let v = store.get(b"k1").unwrap();
     assert_eq!(v, None);
 }

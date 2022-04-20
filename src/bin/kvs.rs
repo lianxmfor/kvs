@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use kvs::{lsm::database::Database, Store};
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -36,16 +37,19 @@ enum Commands {
 
 fn main() {
     let cli = Cli::parse();
+    let mut store = Database::new("/tmp/kvs".into());
 
     match cli.command {
         Some(Commands::Set { key, value }) => {
             println!("run set, key:{}, value: {}", key, value);
+            store.set(key.as_bytes(), value.as_bytes()).unwrap();
         }
         Some(Commands::Get { key }) => {
-            println!("run get, key: {}", key);
+            let value = store.get(key.as_bytes()).unwrap().unwrap();
+            println!("{:?}", std::str::from_utf8(value));
         }
         Some(Commands::Rm { key }) => {
-            println!("run rm, key: {}", key);
+            store.remove(key.as_bytes()).unwrap();
         }
         None => {}
     }
